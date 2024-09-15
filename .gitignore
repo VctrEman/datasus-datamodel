@@ -4,6 +4,9 @@
 
 ### Data ###
 *.csv
+*.dbc
+*.parquet
+*.dbf
 *.dat
 *.efx
 *.gbr
