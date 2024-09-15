@@ -3,7 +3,6 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,windows,linux,spark,data
 
 ### Data ###
-*.csv
 *.dbc
 *.parquet
 *.dbf
