@@ -11,10 +11,7 @@ URL = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def fetch_ibge_data(state_filter=None):
-    """
-    Extrai dados do IBGE e retorna um DataFrame com cidades e estados, aplicando filtro opcional.
-    """
+def fetch_ibge_data():
     try:
         request = Request(URL)
         request.add_header('Accept-encoding', 'gzip')
@@ -29,9 +26,6 @@ def fetch_ibge_data(state_filter=None):
     
     for obj in data:
         state_abbr = obj["microrregiao"]["mesorregiao"]["UF"]["sigla"]
-        
-        if state_filter and state_abbr != state_filter:
-            continue
         
         city = {
             "city_code": str(obj["id"])[:6], 
@@ -50,10 +44,6 @@ def fetch_ibge_data(state_filter=None):
     cities_df = pd.DataFrame(cities)
     states_df = pd.DataFrame.from_dict(states, orient="index").reset_index(drop=True)
     
-    if "state_abbr" not in cities_df.columns or "state_abbr" not in states_df.columns:
-        logging.error("A coluna 'state_abbr' está ausente em um dos DataFrames.")
-        return pd.DataFrame()
-
     merged_df = pd.merge(cities_df, states_df, on="state_abbr")
     return merged_df
 
