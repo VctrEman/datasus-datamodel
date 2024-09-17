@@ -1,19 +1,16 @@
-
+from collections.abc import Callable
 from tqdm import tqdm
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+from minio import Minio
+from minio.error import S3Error
 
-# Parallel download function with progress tracking
-def download_data_parallel(ufs, years, months, dbfs_raw_path, downloadFun):
+# Concurrent download
+def download_data_parallel(ufs : list, years, months : list, downloadFun :  Callable):
 
         # Record the start time of the job
     start_time = time.time()
-
-
-    # Ensure the destination folder exists
-    if not os.path.exists(dbfs_raw_path):
-        os.makedirs(dbfs_raw_path)
     
     # Calculate total tasks
     total_tasks = len(ufs) * len(years) * len(months)
@@ -48,3 +45,32 @@ def download_data_parallel(ufs, years, months, dbfs_raw_path, downloadFun):
     # Calculate the total execution time
     total_time = end_time - start_time
     print(f"Total execution time: {total_time:.2f} seconds")
+
+def upload_to_minio(file_path : str, bucket_name : str, object_name : str, minio_client : Minio):
+    """
+    Uploads a file to MinIO.
+
+    :param file_path: Path to the file to upload
+    :param bucket_name: The name of the bucket in MinIO
+    :param object_name: The name the file will have in the bucket (object name)
+    """
+    try:
+        # Check if the bucket exists; create it if it does not exist
+        if not minio_client.bucket_exists(bucket_name):
+            minio_client.make_bucket(bucket_name)
+            print(f"Bucket '{bucket_name}' created successfully.")
+        
+        # Upload the file
+        with open(file_path, 'rb') as file_data:
+            file_stat = os.stat(file_path)
+            minio_client.put_object(
+                bucket_name,
+                object_name,
+                file_data,
+                file_stat.st_size,
+                content_type='application/octet-stream'
+            )
+        print(f"Successfully uploaded '{object_name}' to bucket '{bucket_name}'.")
+    
+    except S3Error as err:
+        print(f"Error uploading file to MinIO: {err}")
