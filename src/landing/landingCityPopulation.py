@@ -2,20 +2,22 @@ from dotenv import load_dotenv
 from minio import Minio
 import os
 from pysus.online_data import IBGE
+from azure.storage.filedatalake import DataLakeServiceClient
+from utils import upload_file_to_adls
 
 load_dotenv()
 
-STORAGE_ENDPOINT = os.getenv("STORAGE_ENDPOINT")
-STORAGE_ACCESS_KEY = os.getenv("STORAGE_ACCESS_KEY")
-STORAGE_SECRET_KEY = os.getenv("STORAGE_SECRET_KEY")
-BUCKET = os.getenv("STORAGE_BUCKET")
+STORAGE_ACCOUNT_NAME = os.getenv("AZSTORAGE_ACCOUNT_NAME")
+STORAGE_ACCOUNT_KEY = os.getenv("AZSTORAGE_ACCOUNT_KEY")
+FILE_SYSTEM_NAME = os.getenv("AZFILE_SYSTEM_NAME")
 
-minio_client = Minio(
-    endpoint=STORAGE_ENDPOINT,
-    access_key=STORAGE_ACCESS_KEY,
-    secret_key=STORAGE_SECRET_KEY,
-    secure=False  # Non HTTPS
+
+service_client = DataLakeServiceClient(
+    account_url=f"https://{STORAGE_ACCOUNT_NAME}.dfs.core.windows.net",
+    credential=STORAGE_ACCOUNT_KEY
 )
+
+file_system_client = service_client.get_file_system_client(file_system=FILE_SYSTEM_NAME)
 
 # Fetch available years
 def get_available_years(source):
@@ -44,7 +46,7 @@ def download_file():
         name = prefix + 'population.csv'
         file_path = temp_dir + '/' + 'population.csv'
         df.to_csv(file_path,index=False)
-        upload_to_minio(file_path, BUCKET, name, minio_client)
+        upload_file_to_adls(file_path, file_system_client, name)
 
 def main():
     download_file()

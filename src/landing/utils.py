@@ -74,3 +74,17 @@ def upload_to_minio(file_path : str, bucket_name : str, object_name : str, minio
     
     except S3Error as err:
         print(f"Error uploading file to MinIO: {err}")
+
+# Upload data to ADLS2
+def upload_file_to_adls(file_path : str, file_system_client, destination_path : str):
+    """
+    tales a file, a file system client, and a destination path and uploads the file to the specified destination path in ADLS2.
+    """
+    # Create a file client
+    file_client = file_system_client.get_file_client(destination_path)
+
+    # Upload CSV data as bytes
+    file_client.upload_data(file_path, overwrite=True)
+    with open(file_path, 'rb') as file:
+        file_contents = file.read()
+        file_client.upload_data(file_contents, overwrite=True)
