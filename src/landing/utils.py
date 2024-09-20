@@ -7,7 +7,7 @@ from minio import Minio
 from minio.error import S3Error
 
 # Concurrent download
-def download_data_parallel(ufs : list, years, months : list, downloadFun :  Callable):
+def download_data_parallel(ufs : list, years, months : list, downloadFun :  Callable) -> None:
 
         # Record the start time of the job
     start_time = time.time()
@@ -46,7 +46,7 @@ def download_data_parallel(ufs : list, years, months : list, downloadFun :  Call
     total_time = end_time - start_time
     print(f"Total execution time: {total_time:.2f} seconds")
 
-def upload_to_minio(file_path : str, bucket_name : str, object_name : str, minio_client : Minio):
+def upload_to_minio(file_path : str, bucket_name : str, object_name : str, minio_client : Minio) -> None:
     """
     Uploads a file to MinIO.
 
@@ -76,10 +76,26 @@ def upload_to_minio(file_path : str, bucket_name : str, object_name : str, minio
         print(f"Error uploading file to MinIO: {err}")
 
 # Upload data to ADLS2
-def upload_file_to_adls(file_path : str, file_system_client, destination_path : str):
+def upload_file_to_adls(file_path : str, destination_path : str) -> None:
     """
-    tales a file, a file system client, and a destination path and uploads the file to the specified destination path in ADLS2.
+    takes a file, a file system client, and a destination path and uploads the file to the specified destination path in ADLS2.
     """
+    from azure.storage.filedatalake import DataLakeServiceClient
+    from dotenv import load_dotenv
+    import os
+
+    STORAGE_ACCOUNT_NAME = os.getenv("AZSTORAGE_ACCOUNT_NAME")
+    STORAGE_ACCOUNT_KEY = os.getenv("AZSTORAGE_ACCOUNT_KEY")
+    FILE_SYSTEM_NAME = os.getenv("AZFILE_SYSTEM_NAME")
+
+
+    service_client = DataLakeServiceClient(
+        account_url=f"https://{STORAGE_ACCOUNT_NAME}.dfs.core.windows.net",
+        credential=STORAGE_ACCOUNT_KEY
+    )
+
+    file_system_client = service_client.get_file_system_client(file_system=FILE_SYSTEM_NAME)
+
     # Create a file client
     file_client = file_system_client.get_file_client(destination_path)
 
@@ -98,7 +114,7 @@ def get_sink_available_data(directory_name : str, file_ending : str = '.csv') ->
 
     load_dotenv()
 
-    def initialize_storage_account(storage_account_name, storage_account_key):
+    def initialize_storage_account(storage_account_name, storage_account_key) -> None:
         try:  
             global service_client
             service_client = DataLakeServiceClient(
@@ -108,22 +124,17 @@ def get_sink_available_data(directory_name : str, file_ending : str = '.csv') ->
         except Exception as e:
             print(e)
 
-    def list_directory_contents(file_system_name, directory_name):
+    def list_directory_contents(file_system_name, directory_name) -> list:
+        paths = []
         try:
             file_system_client = service_client.get_file_system_client(file_system_name)
             paths = file_system_client.get_paths(path=directory_name)
             return [(path.name, path.name.split(file_ending)[0] ) for path in paths if file_ending in path.name ]
 
-
         except Exception as e:
             print(e)
-        return paths
 
-    def get_available_data(directory_name = '/IBGEPOP'):
-        # List the contents of the directory
-        file_system_name = FILE_SYSTEM_NAME
-        available_files = list(list_directory_contents(file_system_name, directory_name))
-        return available_files
+        return paths
 
     STORAGE_ACCOUNT_NAME = os.getenv("AZSTORAGE_ACCOUNT_NAME")
     STORAGE_ACCOUNT_KEY = os.getenv("AZSTORAGE_ACCOUNT_KEY")
@@ -137,12 +148,6 @@ def get_sink_available_data(directory_name : str, file_ending : str = '.csv') ->
 
     return available_files
 
-
-def get_available_years_pop(source):
-    from pysus.ftp.utils import zfill_year
-    from pysus.online_data import IBGE
-    
-    return sorted(set([zfill_year(f.name[-2:]) for f in IBGE.ibge.get_files(source=source)]))
 
 
 def get_download_args(source_available_files : list, sink_available_files: list) -> tuple[bool, list]:
@@ -171,10 +176,3 @@ def get_download_args(source_available_files : list, sink_available_files: list)
     elif len(new_args) > 0: has_data_to_process = True
 
     return has_data_to_process, new_args
-
-
-def get_available_years_pop(source):
-    from pysus.ftp.utils import zfill_year
-    from pysus.online_data import IBGE
-    
-    return sorted(set([zfill_year(f.name[-2:]) for f in IBGE.ibge.get_files(source=source)]))
