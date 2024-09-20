@@ -36,15 +36,19 @@ def download_file():
 
     with TemporaryDirectory() as temp_dir:
 
-        pop_list = [IBGE.get_population(year, source="POP") for year in get_available_years("POP")]
+        available_years = get_available_years("POP")
+
+        max_year = max(available_years)
+
+        pop_list = [IBGE.get_population(year, source="POP") for year in available_years]
 
         df = pd.concat(pop_list)
-        prefix = f'{source}/{data_group}/'
+        prefix = f'{source}{data_group}/'
 
         print(prefix)
 
-        name = prefix + 'population.csv'
-        file_path = temp_dir + '/' + 'population.csv'
+        name = prefix + f'population_{max_year}.csv'
+        file_path = temp_dir + '/' + f'population_{max_year}.csv'
         df.to_csv(file_path,index=False)
         upload_file_to_adls(file_path, file_system_client, name)
 
