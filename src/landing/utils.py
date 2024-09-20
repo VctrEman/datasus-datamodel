@@ -88,3 +88,93 @@ def upload_file_to_adls(file_path : str, file_system_client, destination_path : 
     with open(file_path, 'rb') as file:
         file_contents = file.read()
         file_client.upload_data(file_contents, overwrite=True)
+
+
+def get_sink_available_data(directory_name : str, file_ending : str = '.csv') -> list:
+
+    from azure.storage.filedatalake import DataLakeServiceClient
+    from dotenv import load_dotenv
+    import os
+
+    load_dotenv()
+
+    def initialize_storage_account(storage_account_name, storage_account_key):
+        try:  
+            global service_client
+            service_client = DataLakeServiceClient(
+            account_url=f"https://{storage_account_name}.dfs.core.windows.net",
+            credential=storage_account_key
+        )
+        except Exception as e:
+            print(e)
+
+    def list_directory_contents(file_system_name, directory_name):
+        try:
+            file_system_client = service_client.get_file_system_client(file_system_name)
+            paths = file_system_client.get_paths(path=directory_name)
+            return [(path.name, path.name.split(file_ending)[0] ) for path in paths if file_ending in path.name ]
+
+
+        except Exception as e:
+            print(e)
+        return paths
+
+    def get_available_data(directory_name = '/IBGEPOP'):
+        # List the contents of the directory
+        file_system_name = FILE_SYSTEM_NAME
+        available_files = list(list_directory_contents(file_system_name, directory_name))
+        return available_files
+
+    STORAGE_ACCOUNT_NAME = os.getenv("AZSTORAGE_ACCOUNT_NAME")
+    STORAGE_ACCOUNT_KEY = os.getenv("AZSTORAGE_ACCOUNT_KEY")
+    FILE_SYSTEM_NAME = os.getenv("AZFILE_SYSTEM_NAME")
+
+    initialize_storage_account(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
+
+    # List the contents of the directory
+    file_system_name = FILE_SYSTEM_NAME
+    available_files = list(list_directory_contents(file_system_name, directory_name))
+
+    return available_files
+
+
+def get_available_years_pop(source):
+    from pysus.ftp.utils import zfill_year
+    from pysus.online_data import IBGE
+    
+    return sorted(set([zfill_year(f.name[-2:]) for f in IBGE.ibge.get_files(source=source)]))
+
+
+def get_download_args(source_available_files : list, sink_available_files: list) -> tuple[bool, list]:
+    """
+    args: available_files: list of tuples with the available files in the storage account
+
+    returns: (flag to indicate if there is new data to process, list of years to download)
+    """
+    has_data_to_process = False
+    download_args = []
+
+    sink_args = [arg[1] for arg in sink_available_files] 
+
+    try :
+        download_args = source_available_files
+        new_args = set(download_args) - set(sink_args)
+
+    except Exception as e:
+        print("No data to consider downloading, exception: ", e)
+        max_arg = 0
+        return has_data_to_process
+
+    if len(sink_args) == 0: has_data_to_process = True
+
+    #case when there is data to process, return the flag and the new_args
+    elif len(new_args) > 0: has_data_to_process = True
+
+    return has_data_to_process, new_args
+
+
+def get_available_years_pop(source):
+    from pysus.ftp.utils import zfill_year
+    from pysus.online_data import IBGE
+    
+    return sorted(set([zfill_year(f.name[-2:]) for f in IBGE.ibge.get_files(source=source)]))
