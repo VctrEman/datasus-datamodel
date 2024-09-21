@@ -10,6 +10,10 @@ def get_available_years_pop(source):
     return sorted(set([zfill_year(f.name[-2:]) for f in IBGE.ibge.get_files(source=source)]))
 
 def taskDownloadFile(args_to_download : list, prefix : str) -> None:
+    """
+    args_to_download: a list of years to download
+    prefix: the prefix to save the file in the storage account
+    """
     from tempfile import TemporaryDirectory
     import pandas as pd
 
