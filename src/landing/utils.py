@@ -3,8 +3,13 @@ from tqdm import tqdm
 import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+from pysus.ftp import __cachepath__
+from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
+from dotenv import load_dotenv
+
+load_dotenv("../.env")
 
 # Concurrent download
 def download_data_parallel(ufs : list, years, months : list, downloadFun :  Callable) -> None:
@@ -46,7 +51,7 @@ def download_data_parallel(ufs : list, years, months : list, downloadFun :  Call
     total_time = end_time - start_time
     print(f"Total execution time: {total_time:.2f} seconds")
 
-def upload_to_minio(file_path : str, bucket_name : str, object_name : str, minio_client : Minio) -> None:
+def upload_file_to_minio(file_path : str, object_name : str) -> None:
     """
     Uploads a file to MinIO.
 
@@ -55,6 +60,18 @@ def upload_to_minio(file_path : str, bucket_name : str, object_name : str, minio
     :param object_name: The name the file will have in the bucket (object name)
     """
     try:
+        STORAGE_ENDPOINT = os.getenv("STORAGE_ENDPOINT")
+        STORAGE_ACCESS_KEY = os.getenv("STORAGE_ACCESS_KEY")
+        STORAGE_SECRET_KEY = os.getenv("STORAGE_SECRET_KEY")
+        BUCKET = os.getenv("STORAGE_BUCKET")
+        bucket_name = BUCKET
+
+        minio_client = Minio(
+            endpoint=STORAGE_ENDPOINT,
+            access_key=STORAGE_ACCESS_KEY,
+            secret_key=STORAGE_SECRET_KEY,
+            secure=False  # Non HTTPS
+        )
         # Check if the bucket exists; create it if it does not exist
         if not minio_client.bucket_exists(bucket_name):
             minio_client.make_bucket(bucket_name)
@@ -81,12 +98,11 @@ def upload_file_to_adls(file_path : str, destination_path : str) -> None:
     takes a file, a file system client, and a destination path and uploads the file to the specified destination path in ADLS2.
     """
     from azure.storage.filedatalake import DataLakeServiceClient
-    from dotenv import load_dotenv
     import os
 
-    STORAGE_ACCOUNT_NAME = os.getenv("AZSTORAGE_ACCOUNT_NAME")
-    STORAGE_ACCOUNT_KEY = os.getenv("AZSTORAGE_ACCOUNT_KEY")
-    FILE_SYSTEM_NAME = os.getenv("AZFILE_SYSTEM_NAME")
+    STORAGE_ACCOUNT_NAME = os.getenv("AZSTORAGE_ACCOUNT_NAME") 
+    STORAGE_ACCOUNT_KEY = os.getenv("AZSTORAGE_ACCOUNT_KEY") 
+    FILE_SYSTEM_NAME = os.getenv("AZFILE_SYSTEM_NAME") 
 
 
     service_client = DataLakeServiceClient(
@@ -109,10 +125,7 @@ def upload_file_to_adls(file_path : str, destination_path : str) -> None:
 def get_sink_available_data(directory_name : str, file_ending : str = '.csv') -> list:
 
     from azure.storage.filedatalake import DataLakeServiceClient
-    from dotenv import load_dotenv
     import os
-
-    load_dotenv()
 
     def initialize_storage_account(storage_account_name, storage_account_key) -> None:
         try:  
@@ -136,9 +149,9 @@ def get_sink_available_data(directory_name : str, file_ending : str = '.csv') ->
 
         return paths
 
-    STORAGE_ACCOUNT_NAME = os.getenv("AZSTORAGE_ACCOUNT_NAME")
-    STORAGE_ACCOUNT_KEY = os.getenv("AZSTORAGE_ACCOUNT_KEY")
-    FILE_SYSTEM_NAME = os.getenv("AZFILE_SYSTEM_NAME")
+    STORAGE_ACCOUNT_NAME = os.getenv("AZSTORAGE_ACCOUNT_NAME") 
+    STORAGE_ACCOUNT_KEY = os.getenv("AZSTORAGE_ACCOUNT_KEY") 
+    FILE_SYSTEM_NAME = os.getenv("AZFILE_SYSTEM_NAME") 
 
     initialize_storage_account(STORAGE_ACCOUNT_NAME, STORAGE_ACCOUNT_KEY)
 
@@ -176,3 +189,21 @@ def get_download_args(source_available_files : list, sink_available_files: list)
     elif len(new_args) > 0: has_data_to_process = True
 
     return has_data_to_process, new_args
+
+
+def get_available_years_pop(source):
+    from pysus.online_data import IBGE
+    from pysus.ftp.utils import zfill_year
+
+    return sorted(set([zfill_year(f.name[-2:]) for f in IBGE.ibge.get_files(source=source)]))
+
+
+def change_cache_directory(new_cache_path: str = "/src/caching") -> None:
+    
+    """
+    Changes the caching directory to the specified path.
+    """
+    global __cachepath__
+    os.makedirs(new_cache_path, exist_ok=True)
+    __cachepath__ = Path(new_cache_path)
+    print(f"Current cache directory: {__cachepath__}")
