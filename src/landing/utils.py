@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv("../.env")
 
 # Concurrent download
-def download_data_parallel(ufs : list, years, months : list, downloadFun :  Callable) -> None:
+def download_data_parallel(ufs : list, years : list, months : list, downloadFun :  Callable) -> None:
 
         # Record the start time of the job
     start_time = time.time()
@@ -207,3 +207,6 @@ def change_cache_directory(new_cache_path: str = "/src/caching") -> None:
     os.makedirs(new_cache_path, exist_ok=True)
     __cachepath__ = Path(new_cache_path)
     print(f"Current cache directory: {__cachepath__}")
+
+def azcopyDir(source, destination):
+    os.system(f"azcopy copy '{source}' '{destination}' --recursive")
