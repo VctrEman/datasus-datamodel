@@ -57,7 +57,7 @@ def main(dbfs_raw_path: str, url: str, output_file: str, minio_object_name: str)
     Main function to fetch data, save locally, and upload to MinIO.
     :param dbfs_raw_path: Path to save the raw data.
     :param url: URL to fetch the data from.
-    :param output_file: Name of the output CSV file.
+    :param output_file: Name of the output Parquet file.
     :param minio_object_name: Object name for the file in MinIO.
     """
     merged_data = fetch_ibge_data(url)
@@ -79,9 +79,9 @@ def main(dbfs_raw_path: str, url: str, output_file: str, minio_object_name: str)
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fetch IBGE data and upload to MinIO.")
     
-    parser.add_argument("-d", "--dbfs_raw_path", type=str, default="./adls/bronze/", help="Caminho para salvar o arquivo CSV.")
+    parser.add_argument("-d", "--dbfs_raw_path", type=str, default="./adls/bronze/", help="Caminho para salvar o arquivo Parquet.")
     parser.add_argument("-u", "--url", type=str, default="https://servicodados.ibge.gov.br/api/v1/localidades/municipios", help="URL da API do IBGE.")
-    parser.add_argument("-o", "--output_file", type=str, default="localization.parquet", help="Nome do arquivo CSV de saída.")
+    parser.add_argument("-o", "--output_file", type=str, default="localization.parquet", help="Nome do arquivo Parquet de saída.")
     parser.add_argument("-m", "--minio_object_name", type=str, default="localization.parquet", help="Nome do objeto no MinIO.")
     
     args = parser.parse_args()
