@@ -2,18 +2,12 @@ import argparse
 import ast
 from itertools import product
 from utils import change_cache_directory, upload_file_to_adls, upload_file_to_minio, download_data_parallel
+import os
+from tempfile import TemporaryDirectory
+from pysus.online_data import SIA
+import glob
 
-def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> None:
-    """
-    args_to_download: a list of years to download
-    prefix: the prefix to save the file in the storage account
-    """
-    import os
-    from tempfile import TemporaryDirectory
-    from pysus.online_data import SIA
-    import glob
-
-    def simple_download_sia(year : int, month : int, uf : str = 'CE') -> str:
+def simple_download_sia(year : int, month : int, uf : str = 'CE') -> str:
 
         data_group = 'PA'
         source ='SIA'
@@ -34,13 +28,23 @@ def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> N
                 for file_path in files:
                     name = prefix + os.path.basename(file_path)
                     print(name)
-                    upload_file_to_adls(file_path, name)
+                    # upload_file_to_adls(file_path, name)
+                    upload_file_to_minio(file_path, name)
             result =  "SUCCESS"
             return result
 
         except Exception as e:
             print(f"Failed to download data for UF: {uf}, Year: {year}, Month: {month}: {str(e)}")
             return result
+
+def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> None:
+    """
+    args_to_download: a list of years to download
+    prefix: the prefix to save the file in the storage account
+    """
+
+
+    
     
     download_data_parallel(ufs, years, months, downloadFun = simple_download_sia)
 

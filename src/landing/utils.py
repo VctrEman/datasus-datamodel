@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from tqdm import tqdm
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import time
 from pysus.ftp import __cachepath__
 from pathlib import Path
@@ -9,7 +9,7 @@ from minio import Minio
 from minio.error import S3Error
 from dotenv import load_dotenv
 
-load_dotenv("../.env")
+load_dotenv()
 
 # Concurrent download
 def download_data_parallel(ufs : list, years, months : list, downloadFun :  Callable) -> None:
@@ -24,7 +24,8 @@ def download_data_parallel(ufs : list, years, months : list, downloadFun :  Call
     error_count = 0
 
     # Create a ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=100) as executor, tqdm(total=total_tasks) as progress_bar:
+    # with ThreadPoolExecutor(max_workers=100) as executor, tqdm(total=total_tasks) as progress_bar:
+    with ProcessPoolExecutor(max_workers=100) as executor, tqdm(total=total_tasks) as progress_bar:
         # Using a list to store download tasks
         futures = [
             executor.submit(downloadFun, year, month, uf)
