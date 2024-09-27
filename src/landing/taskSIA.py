@@ -1,29 +1,30 @@
 import argparse
 import ast
 from itertools import product
-from utils import change_cache_directory, azcopyDir, download_data_parallel
+from utils import change_cache_directory, azcopyDir, azcopySyncDir, download_data_parallel
 
 def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> None:
     """
     args_to_download: a list of years to download
     prefix: the prefix to save the file in the storage account
     """
-    import os
     from pysus.online_data import SIA
+    import time
+
 
     def simple_download_sia(year : int, month : int, uf : str = 'CE') -> str:
+        start_time = time.time()
 
         data_group = 'PA'
-        source ='SIA'
         result = 'ERROR'
         print(f"Downloading data for UF: {uf}, Year: {year}, Month: {month}")
         try:
+            dir = f"{default_download_dir}{uf}"
             
-            # Create directory for saving data
-            #save_dir = os.path.join(os.getcwd(), 'downloaded_data', f'{uf}_{year}_{month}')
-            #os.makedirs(save_dir, exist_ok=True)
-            
-            SIA.download([uf], [year], [month], groups=data_group, data_dir=default_download_dir)
+            SIA.download([uf], [year], [month], groups=data_group, data_dir=dir)
+            azcopyDir(source=dir, destination=args.sink_dir)
+            print("finished azcopy job")
+            print("texec: ", time.time() - start_time)
             result =  "SUCCESS"
             return result
 
@@ -31,12 +32,8 @@ def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> N
             print(f"Failed to download data for UF: {uf}, Year: {year}, Month: {month}: {str(e)}")
             return result
         
-    default_download_dir = "./download"
-    os.makedirs(default_download_dir, exist_ok=True)
+    default_download_dir = "./download/"
     download_data_parallel(ufs, years, months, downloadFun = simple_download_sia)
-
-    azcopyDir(source=default_download_dir, destination=args.sink_dir)
-    print("finished azcopy job")
 
 
 if __name__ == '__main__':

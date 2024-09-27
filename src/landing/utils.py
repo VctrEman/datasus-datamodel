@@ -24,7 +24,7 @@ def download_data_parallel(ufs : list, years : list, months : list, downloadFun 
     error_count = 0
 
     # Create a ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=100) as executor, tqdm(total=total_tasks) as progress_bar:
+    with ThreadPoolExecutor(max_workers=100) as executor:
         # Using a list to store download tasks
         futures = [
             executor.submit(downloadFun, year, month, uf)
@@ -38,9 +38,6 @@ def download_data_parallel(ufs : list, years : list, months : list, downloadFun 
             # Check if the task was successful
             if result is None:  # Assume None represents failure
                 error_count += 1
-
-            # Update the progress bar for each completed task
-            progress_bar.update(1)
 
     # Print summary of download errors
     print(f"All downloads completed, errors: {error_count}")
@@ -209,4 +206,7 @@ def change_cache_directory(new_cache_path: str = "/src/caching") -> None:
     print(f"Current cache directory: {__cachepath__}")
 
 def azcopyDir(source, destination):
-    os.system(f"azcopy copy '{source}' '{destination}' --recursive")
+    os.system(f"azcopy copy '{source}/*' '{destination}' --recursive")
+
+def azcopySyncDir(source, destination):
+    os.system(f"azcopy sync '{source}/*' '{destination}' --recursive")
