@@ -1,8 +1,9 @@
 from collections.abc import Callable
 from tqdm import tqdm
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import time
+import psutil
 from pysus.ftp import __cachepath__
 from pathlib import Path
 from minio import Minio
@@ -23,8 +24,8 @@ def download_data_parallel(ufs : list, years : list, months : list, downloadFun 
     # Initialize error counter
     error_count = 0
 
-    # Create a ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=100) as executor:
+    # Create a ProcessPoolExecutor
+    with ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
         # Using a list to store download tasks
         futures = [
             executor.submit(downloadFun, year, month, uf)
@@ -210,3 +211,9 @@ def azcopyDir(source, destination):
 
 def azcopySyncDir(source, destination):
     os.system(f"azcopy sync '{source}/*' '{destination}' --recursive")
+    
+def monitor_cpu_usage():
+    # Uso da CPU por núcleo
+    cpu_percentages = psutil.cpu_percent(interval=1, percpu=True)
+    for i, percentage in enumerate(cpu_percentages):
+        print(f"Núcleo {i}: {percentage}% de uso")
