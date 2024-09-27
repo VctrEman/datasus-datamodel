@@ -18,6 +18,15 @@ RUN curl -L -o azcopy.tar.gz https://aka.ms/downloadazcopy-v10-linux && \
     tar --strip-components=1 -C /usr/local/bin --no-same-owner --exclude="*.txt" -xzvf azcopy.tar.gz && \
     chmod 755 /usr/local/bin/azcopy && \
     rm azcopy.tar.gz
+    
+#declare writeable directory for azcopy
+ENV AZCOPY_LOG_LOCATION=/home/_azbatch/azcopy/azcopy_logs
+ENV AZCOPY_JOB_PLAN_LOCATION=/home/_azbatch/azcopy/azcopy_job_plan
+
+# Create writeable directory for azcopy
+RUN mkdir -p $AZCOPY_LOG_LOCATION && \
+  mkdir -p $AZCOPY_JOB_PLAN_LOCATION && \
+  chmod 777 $AZCOPY_LOG_LOCATION $AZCOPY_JOB_PLAN_LOCATION
 
 # pysus caching directory is being set in the running code
 RUN mkdir -p /home/_azbatch/pysus && chmod 777 /home/_azbatch/pysus

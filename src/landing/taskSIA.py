@@ -1,7 +1,7 @@
 import argparse
 import ast
 from itertools import product
-from utils import change_cache_directory, azcopyDir, azcopySyncDir, download_data_parallel
+from utils import change_cache_directory, azcopyDir, download_data_parallel
 
 def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> None:
     """
@@ -22,6 +22,7 @@ def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> N
             dir = f"{default_download_dir}{uf}"
             
             SIA.download([uf], [year], [month], groups=data_group, data_dir=dir)
+            print("azcopydir: ", dir)
             azcopyDir(source=dir, destination=args.sink_dir)
             print("finished azcopy job")
             print("texec: ", time.time() - start_time)
