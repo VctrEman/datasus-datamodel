@@ -19,7 +19,7 @@ def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> N
         result = 'ERROR'
         print(f"Downloading data for UF: {uf}, Year: {year}, Month: {month}")
         try:
-            dir = f"{default_download_dir}{uf}"
+            dir = f"{default_download_dir}{year}{uf}"
             
             SIA.download([uf], [year], [month], groups=data_group, data_dir=dir)
             print("azcopydir: ", dir)
