@@ -3,37 +3,35 @@ import ast
 from itertools import product
 from utils import change_cache_directory, azcopyDir, download_data_parallel
 
+def simple_download_sia(year : int, month : int, uf : str = 'CE') -> str:
+    from pysus.online_data import SIA
+    import time
+    start_time = time.time()
+
+    data_group = 'PA'
+    result = 'ERROR'
+    print(f"Downloading data for UF: {uf}, Year: {year}, Month: {month}")
+    try:
+        prefix_download = f"{data_group}/{year}/{month}/{uf}"
+        dir = f"{prefix_download}"
+        
+        SIA.download([uf], [year], [month], groups=data_group, data_dir=prefix_download)
+        print("azcopydir: ", dir)
+        azcopyDir(source=prefix_download, destination=args.sink_dir)
+        print("finished azcopy job")
+        print("texec: ", time.time() - start_time)
+        result =  "SUCCESS"
+        return result
+
+    except Exception as e:
+        print(f"Failed to download data for UF: {uf}, Year: {year}, Month: {month}: {str(e)}")
+        return result
+        
 def taskDownloadFile(prefix : str, years : list, months : list, ufs : list) -> None:
     """
     args_to_download: a list of years to download
     prefix: the prefix to save the file in the storage account
     """
-    from pysus.online_data import SIA
-    import time
-
-
-    def simple_download_sia(year : int, month : int, uf : str = 'CE') -> str:
-        start_time = time.time()
-
-        data_group = 'PA'
-        result = 'ERROR'
-        print(f"Downloading data for UF: {uf}, Year: {year}, Month: {month}")
-        try:
-            dir = f"{default_download_dir}{year}{uf}"
-            
-            SIA.download([uf], [year], [month], groups=data_group, data_dir=dir)
-            print("azcopydir: ", dir)
-            azcopyDir(source=dir, destination=args.sink_dir)
-            print("finished azcopy job")
-            print("texec: ", time.time() - start_time)
-            result =  "SUCCESS"
-            return result
-
-        except Exception as e:
-            print(f"Failed to download data for UF: {uf}, Year: {year}, Month: {month}: {str(e)}")
-            return result
-        
-    default_download_dir = "./download/"
     download_data_parallel(ufs, years, months, downloadFun = simple_download_sia)
 
 

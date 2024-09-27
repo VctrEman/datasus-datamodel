@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from tqdm import tqdm
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import time
 from pysus.ftp import __cachepath__
 from pathlib import Path
@@ -24,7 +24,7 @@ def download_data_parallel(ufs : list, years : list, months : list, downloadFun 
     error_count = 0
 
     # Create a ThreadPoolExecutor
-    with ThreadPoolExecutor(max_workers=100) as executor:
+    with ProcessPoolExecutor(max_workers=20)as executor:
         # Using a list to store download tasks
         futures = [
             executor.submit(downloadFun, year, month, uf)
@@ -206,7 +206,7 @@ def change_cache_directory(new_cache_path: str = "/src/caching") -> None:
     print(f"Current cache directory: {__cachepath__}")
 
 def azcopyDir(source, destination):
-    os.system(f"azcopy copy '{source}/*' '{destination}' --recursive")
+    os.system(f"azcopy copy '{source}' '{destination}' --recursive")
 
 def azcopySyncDir(source, destination):
-    os.system(f"azcopy sync '{source}/*' '{destination}' --recursive")
+    os.system(f"azcopy sync '{source}' '{destination}' --recursive")
