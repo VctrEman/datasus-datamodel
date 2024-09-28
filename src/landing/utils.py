@@ -24,7 +24,7 @@ def download_data_parallel(prefix : str, ufs : list, years : list, months : list
     error_count = 0
 
     # Create a ThreadPoolExecutor
-    with ProcessPoolExecutor(max_workers=2)as executor:
+    with ProcessPoolExecutor(max_workers=4) as executor:
         # Using a list to store download tasks
         futures = [
             executor.submit(downloadFun, prefix, year, month, uf)

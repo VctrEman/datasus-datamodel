@@ -7,6 +7,7 @@ def simple_download_sia(prefix : str, year : int, month : int, uf : str = 'CE') 
     from pysus.online_data import SIA
     import time
     import os
+    import shutil
     start_time = time.time()
 
     data_group = 'PA'
@@ -16,7 +17,7 @@ def simple_download_sia(prefix : str, year : int, month : int, uf : str = 'CE') 
 
         prefix_download = f"./{prefix}/{data_group}/{year}/{month}/{uf}"
 
-        DIR = f"JOB_PA/{year}/{month}/{uf}"
+        DIR = f"{prefix}/{year}/{month}/{uf}"
         sink_dir = f"{args.sink_dir}/{DIR}?{args.aztoken}"
         
         SIA.download([uf], [year], [month], groups=data_group, data_dir=prefix_download)
@@ -24,6 +25,7 @@ def simple_download_sia(prefix : str, year : int, month : int, uf : str = 'CE') 
         print("azcopydir: ", prefix_download)
         print("sink dir: ", f"{args.sink_dir}/{DIR}")
         azcopyDir(source=prefix_download, destination=sink_dir)
+        shutil.rmtree(prefix_download)
         print("finished azcopy job")
         print("texec: ", time.time() - start_time)
         result =  "SUCCESS"
@@ -55,7 +57,7 @@ if __name__ == '__main__':
                          type=str, default="[1]")
     args = parser.parse_args()
 
-    ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
+    ufs = ['TO', 'SE', 'SP', 'SC', 'RR', 'RO', 'RS', 'RN', 'RJ', 'PI', 'PE', 'PR', 'PB', 'PA', 'MG', 'MS', 'MT', 'MA', 'GO', 'ES', 'DF', 'CE', 'BA', 'AM', 'AP', 'AL', 'AC']
     try:
         cache_dir = "./pysus_caching"
         change_cache_directory(cache_dir)
