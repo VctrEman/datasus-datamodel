@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv("../.env")
 
 # Concurrent download
-def download_data_parallel(ufs : list, years : list, months : list, downloadFun :  Callable) -> None:
+def download_data_parallel(prefix : str, ufs : list, years : list, months : list, downloadFun :  Callable) -> None:
 
         # Record the start time of the job
     start_time = time.time()
@@ -24,10 +24,10 @@ def download_data_parallel(ufs : list, years : list, months : list, downloadFun 
     error_count = 0
 
     # Create a ThreadPoolExecutor
-    with ProcessPoolExecutor(max_workers=20)as executor:
+    with ProcessPoolExecutor(max_workers=2)as executor:
         # Using a list to store download tasks
         futures = [
-            executor.submit(downloadFun, year, month, uf)
+            executor.submit(downloadFun, prefix, year, month, uf)
             for uf in ufs for year in years for month in months
         ]
 
@@ -206,7 +206,8 @@ def change_cache_directory(new_cache_path: str = "/src/caching") -> None:
     print(f"Current cache directory: {__cachepath__}")
 
 def azcopyDir(source, destination):
-    os.system(f"azcopy copy '{source}' '{destination}' --recursive")
+    """copy contentes from source"""
+    os.system(f"azcopy copy '{source}/*' '{destination}' --recursive")
 
 def azcopySyncDir(source, destination):
-    os.system(f"azcopy sync '{source}' '{destination}' --recursive")
+    os.system(f"azcopy sync '{source}/*' '{destination}' --recursive")
