@@ -57,7 +57,7 @@ if __name__ == '__main__':
                          type=str, default="[1]")
     args = parser.parse_args()
 
-    ufs = ['TO', 'SE', 'SP', 'SC', 'RR', 'RO', 'RS', 'RN', 'RJ', 'PI', 'PE', 'PR', 'PB', 'PA', 'MG', 'MS', 'MT', 'MA', 'GO', 'ES', 'DF', 'CE', 'BA', 'AM', 'AP', 'AL', 'AC']
+    ufs = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
     try:
         cache_dir = "./pysus_caching"
         change_cache_directory(cache_dir)
