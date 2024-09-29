@@ -3,6 +3,7 @@ from tqdm import tqdm
 import os
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import time
+import psutil
 from pysus.ftp import __cachepath__
 from pathlib import Path
 from minio import Minio
@@ -211,3 +212,9 @@ def azcopyDir(source, destination):
 
 def azcopySyncDir(source, destination):
     os.system(f"azcopy sync '{source}/*' '{destination}' --recursive")
+    
+def monitor_cpu_usage():
+    # Uso da CPU por núcleo
+    cpu_percentages = psutil.cpu_percent(interval=1, percpu=True)
+    for i, percentage in enumerate(cpu_percentages):
+        print(f"Núcleo {i}: {percentage}% de uso")
