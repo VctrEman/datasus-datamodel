@@ -3,7 +3,7 @@ import ast
 from itertools import product
 from utils import change_cache_directory, azcopyDir, download_data_parallel, monitor_cpu_usage
 
-def simple_download_sih(prefix: str, year : int, month : int, uf : str = 'CE') -> str:
+def simple_download_sih(prefix: str, year : int, month : int, uf : str = 'CE', args=None) -> str:
     import os
     from pysus.online_data import SIH
     from time import time
@@ -26,7 +26,7 @@ def simple_download_sih(prefix: str, year : int, month : int, uf : str = 'CE') -
         print("finished azcopy job")
         print("texec: ", time() - start_time)
         monitor_cpu_usage()
-        result = "SUCESS"
+        result = "SUCCESS"
         return result
 
     except Exception as e:
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument("-m", "--months", help="a list of months to download", type=str,
                         default="[1]")
     parser.add_argument("-u", "--ufs", help="a list of ufs to download", type=str,
-                    nargs="+", choices=ufs, default=ufs)
+                    default=str(ufs))
     args = parser.parse_args()
 
     try:
@@ -65,15 +65,13 @@ if __name__ == '__main__':
         change_cache_directory(cache_dir)
 
         #assert that the argument is a list like objct
-        # Verificando se args.ufs está na forma correta
-        ufs_input = args.ufs
+        args.ufs = ast.literal_eval(args.ufs)
         args.years = ast.literal_eval(args.years)
         args.months = ast.literal_eval(args.months)
-        print(len(tuple(product(ufs_input, args.years, args.months))))
-        print(args.years, args.months, ufs_input)
-        taskDownloadFile(args.prefix, args.years, args.months, ufs_input)
+        print(len(tuple(product(args.ufs, args.years, args.months))))
+        print(args.years, args.months, args.ufs)
+        taskDownloadFile(args.prefix, args.years, args.months, args.ufs)
         print("success")
 
     except Exception as e:
         print(e)
-
