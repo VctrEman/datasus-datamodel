@@ -4,6 +4,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import time
 import psutil
+import subprocess
 from pysus.ftp import __cachepath__
 from pathlib import Path
 from minio import Minio
@@ -208,7 +209,10 @@ def change_cache_directory(new_cache_path: str = "/src/caching") -> None:
 
 def azcopyDir(source, destination):
     """copy contentes from source"""
-    os.system(f"azcopy copy '{source}/*' '{destination}' --recursive")
+    if not source or not destination:
+        raise ValueError("Source and destination paths must not be empty.")
+    command = ["azcopy", "copy", f"{source}/*", destination, "--recursive"]
+    subprocess.run(command, check=True)
 
 def azcopySyncDir(source, destination):
     os.system(f"azcopy sync '{source}/*' '{destination}' --recursive")

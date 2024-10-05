@@ -3,7 +3,7 @@ import ast
 from itertools import product
 from utils import change_cache_directory, azcopyDir, download_data_parallel, monitor_cpu_usage
 
-def simple_download_sia(prefix : str, year : int, month : int, uf : str = 'CE') -> str:
+def simple_download_sia(prefix : str, year : int, month : int, uf : str = 'CE', args=None) -> str:
     from pysus.online_data import SIA
     import time
     import os

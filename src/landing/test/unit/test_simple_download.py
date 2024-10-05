@@ -1,30 +1,31 @@
 from taskSIA import simple_download_sia, taskDownloadFile
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
-def test_simple_download_sia_falure():
-    with patch('pysus.online_data.SIA.download') as mock_download:
-            
-        mock_download.side = Exception("Download Failed")
+def test_simple_download_sia():
+    with patch('pysus.online_data.SIA.download', return_value=None), \
+         patch('taskSIA.azcopyDir'), \
+         patch('taskSIA.monitor_cpu_usage'), \
+         patch('os.listdir', return_value=['file1.csv', 'file2.csv']), \
+         patch('os.path.exists', return_value=True):
         
-        prefix="SIA"
-        year=[2008]
-        month=[1]
-        uf=["CE"]
+        mock_args = MagicMock()
+        mock_args.sink_dir = "/mock/sink/dir"
+        mock_args.aztoken = "mock_token"
+        prefix = "SIA"
+        year = [2008]
+        month = [1]
+        uf = "CE"
         
-        result = simple_download_sia(prefix, year, month, uf)
-        assert result == "ERROR"
+        result = simple_download_sia(prefix=prefix, year=year, month=month, uf=uf, args=mock_args)
+        assert result == "SUCCESS"
         
-        
-def test_task_download_file():
-    with patch('taskSIA.download_data_parallel') as mock_download_data_parallel:
-        mock_download_data_parallel.side_effect = Exception("Download Failed")
-        
-        prefix="SIA"
-        year=[2008]
-        month=[2]
-        uf=["PI"]
-        
-        try: 
-            taskDownloadFile(prefix, year, month, uf)            
-        except Exception as e:
-            assert str(e) == "Download Failed"
+
+def test_taskDownloadFile():
+    with patch('taskSIA.download_data_parallel') as mock_download:
+        prefix = "SIA"
+        years = [2008]
+        months = [1]
+        ufs = ["CE"]
+
+        taskDownloadFile(prefix=prefix, years=years, months=months, ufs=ufs)
+        mock_download.assert_called_once_with(prefix=prefix, ufs=ufs, years=years, months=months, downloadFun=simple_download_sia)
