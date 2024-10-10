@@ -6,18 +6,44 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StringType
 import pyspark.sql.functions as f
 
-def parse_args():
-    parser = argparse.ArgumentParser(description="Process SIH data.")
-    parser.add_argument('--read_partition', type=str, required=True, help='Partition to read')
-    return parser.parse_args()
-
 def init_spark():
     findspark.init()
+    #jar_list = [os.path.join(spark_home, 'jars', jar) for jar in jar_list]
+    jar_list = [
+        "com.fasterxml.jackson.core_jackson-core-2.10.5.jar",
+        "com.google.code.findbugs_jsr305-3.0.2.jar",
+        "com.google.errorprone_error_prone_annotations-2.2.0.jar",
+        "com.google.guava_failureaccess-1.0.jar",
+        "com.google.guava_guava-27.0-jre.jar",
+        "com.google.guava_listenablefuture-9999.0-empty-to-avoid-conflict-with-guava.jar",
+        "com.google.j2objc_j2objc-annotations-1.1.jar",
+        "com.microsoft.azure_azure-keyvault-core-1.0.0.jar",
+        "com.microsoft.azure_azure-storage-7.0.1.jar",
+        "commons-codec_commons-codec-1.11.jar",
+        "commons-logging_commons-logging-1.1.3.jar",
+        "org.apache.hadoop.thirdparty_hadoop-shaded-guava-1.1.1.jar",
+        "org.apache.hadoop_hadoop-azure-3.3.1.jar",
+        "org.apache.httpcomponents_httpclient-4.5.13.jar",
+        "org.apache.httpcomponents_httpcore-4.4.13.jar",
+        "org.checkerframework_checker-qual-2.5.2.jar",
+        "org.codehaus.jackson_jackson-core-asl-1.9.13.jar",
+        "org.codehaus.jackson_jackson-mapper-asl-1.9.13.jar",
+        "org.codehaus.mojo_animal-sniffer-annotations-1.17.jar",
+        "org.eclipse.jetty_jetty-util-9.4.40.v20210413.jar",
+        "org.eclipse.jetty_jetty-util-ajax-9.4.40.v20210413.jar",
+        "org.slf4j_slf4j-api-1.7.30.jar",
+        "org.wildfly.openssl_wildfly-openssl-1.0.7.Final.jar"
+    ]
+#    spark_home_jars = os.getenv('SPARK_HOME') + "/jars/"
+#    missing_files = [jar for jar in jar_list if not os.path.isfile(spark_home_jars + jar)]
+#    if missing_files:
+#        print(f"Warning: The following JAR files are missing: {missing_files}")
+    jars_concatenated = ",".join(jar_list)
+
     spark = (
         SparkSession.builder.master("local[*]").appName("toSilver")
         .config(
-            "spark.jars.packages",
-            "org.apache.hadoop:hadoop-azure:3.3.1"
+            "spark.jars", jars_concatenated
         )#.config("spark.io.compression.zstd.level", 1)
         ).getOrCreate()
     return spark
@@ -184,7 +210,7 @@ def process_data(spark, read_path, write_path):
     )
 
     print("Cols written", len(df.columns))
-    df.write.option("compression", "none").parquet(write_path, mode="overwrite")
+    df.write.option("compression", "zstd").parquet(write_path, mode="overwrite")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -193,6 +219,8 @@ if __name__ == "__main__":
     parser.add_argument("-o", "--output", help="result file to write", type=str,
                         default="SIH/2018/10")
     args = parser.parse_args()
+
+    print("Start py script")
 
     start_time = time.time()
 
@@ -222,4 +250,5 @@ if __name__ == "__main__":
     process_data(spark, read_path, write_path)
 
     print("texec: ", time.time() - start_time)
+    spark.stop()
     print("success")
