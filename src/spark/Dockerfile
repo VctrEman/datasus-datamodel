@@ -1,15 +1,20 @@
-FROM python:3.11.10-slim-bullseye
+FROM python:3.11.4-slim-buster
 
 ENV SPARK_VERSION=3.3.4 \
     HADOOP_VERSION=3 \
-    JAVA_VERSION=11 \
-    SPARK_HOME=/opt/spark \
+    JAVA_VERSION=8 \
+    SPARK_HOME=/usr/spark \
     PACKAGES="org.apache.hadoop:hadoop-azure:3.3.1"
 
-# Install Java 11 (JRE)
+# Install Java 8 (JRE)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    openjdk-11-jre-headless \
     curl \
+    gnupg2 \
+    software-properties-common \
+    && curl -L https://apt.corretto.aws/corretto.key | apt-key add - \
+    && add-apt-repository 'deb https://apt.corretto.aws stable main' \
+    && apt-get update \
+    && apt-get install -y java-1.8.0-amazon-corretto-jdk \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -19,10 +24,10 @@ RUN curl -O https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-$
     rm spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz
 
 ENV PATH=$SPARK_HOME/bin:$SPARK_HOME/sbin:$PATH
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV JAVA_HOME=/usr/lib/jvm/java-1.8.0-amazon-corretto
 
 # Install PySpark, findspark
-RUN pip install -q findspark pyspark==${SPARK_VERSION}
+RUN pip install findspark==2.0.1 pyspark==${SPARK_VERSION}
 
 # Create directories for JAR files and temporary downloads
 ENV TMP="download_jars"
@@ -54,12 +59,9 @@ RUN curl -L -o /$TMP/jars/com.fasterxml.jackson.core_jackson-core-2.10.5.jar htt
 
 # Move JARs to Spark jars directory
 RUN mv /$TMP/jars/* $SPARK_HOME/jars/ 
-#&& \
-#    rm -rf /$TMP/jars
 
-
-#ENV PATH=$PATH:/src
-#ENV PYTHONPATH=/src
+ENV PATH=$PATH:/src
+ENV PYTHONPATH=/src
 
 # caching directory is being set in the running code
 RUN mkdir -p /home/_azbatch/pysus && chmod 777 /home/_azbatch/pysus

@@ -8,7 +8,6 @@ import pyspark.sql.functions as f
 
 def init_spark():
     findspark.init()
-    #jar_list = [os.path.join(spark_home, 'jars', jar) for jar in jar_list]
     jar_list = [
         "com.fasterxml.jackson.core_jackson-core-2.10.5.jar",
         "com.google.code.findbugs_jsr305-3.0.2.jar",
@@ -34,17 +33,21 @@ def init_spark():
         "org.slf4j_slf4j-api-1.7.30.jar",
         "org.wildfly.openssl_wildfly-openssl-1.0.7.Final.jar"
     ]
-#    spark_home_jars = os.getenv('SPARK_HOME') + "/jars/"
-#    missing_files = [jar for jar in jar_list if not os.path.isfile(spark_home_jars + jar)]
-#    if missing_files:
-#        print(f"Warning: The following JAR files are missing: {missing_files}")
+    spark_home_jars = os.getenv('SPARK_HOME') + "/jars/"
+    missing_files = [jar for jar in jar_list if not os.path.isfile(spark_home_jars + jar)]
+    if missing_files:
+        print(f"Warning: The following JAR files are missing: {missing_files}")
     jars_concatenated = ",".join(jar_list)
 
     spark = (
         SparkSession.builder.master("local[*]").appName("toSilver")
-        .config(
-            "spark.jars", jars_concatenated
-        )#.config("spark.io.compression.zstd.level", 1)
+        .config("spark.jars", jars_concatenated)
+        .config("spark.io.compression.zstd.level", 12)
+        .config("spark.sql.execution.arrow.pyspark.enabled", "true")
+        .config("spark.sql.shuffle.partitions", "4")  # based on the size of the dataset and available cores, same as workers from process pool
+        .config("spark.executor.cores", "2")    # Use both vCPUs for executor (this config is just for safety, no performance)
+        .config("spark.executor.memory", "5g")  #(this config is just for safety, no performance)
+        .config("spark.driver.memory", "2g") #leaving 1gb for system processes (this config is just for safety, no performance)
         ).getOrCreate()
     return spark
 
@@ -59,6 +62,7 @@ def set_spark_conf(spark, storage_account_name : str, sp_id : str, sp_secret_val
     spark.conf.set(f"fs.azure.account.oauth2.client.id.{storage_account_name}.dfs.core.windows.net", sp_id) #it was complaining about the sp_id null
     spark.conf.set(f"fs.azure.account.oauth2.client.secret.{storage_account_name}.dfs.core.windows.net", sp_secret_value)
     spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{storage_account_name}.dfs.core.windows.net", f"https://login.microsoftonline.com/{sp_directoryId}/oauth2/token")
+    spark.sparkContext.setLogLevel("ERROR")
 
 def process_data(spark, read_path, write_path):
     """
@@ -238,17 +242,17 @@ if __name__ == "__main__":
     write_path  = f"abfss://{write_file_system}@{os.getenv('STORAGE_ACCOUNT_NAME')}.dfs.core.windows.net/{args.output}"
     
     spark = init_spark()
-    print(f"storage_account_name\n{storage_account_name}, \nsp_id{sp_id}, znsp_secret_value\n{sp_secret_value}, \nsp_directoryId\n{sp_directoryId}")
+
     set_spark_conf(spark, 
                     storage_account_name = storage_account_name,
                     sp_id = sp_id,
                     sp_secret_value = sp_secret_value,
                     sp_directoryId = sp_directoryId
                     )
-
-    print("texec: ", time.time() - start_time)
+ 
+    print("checkpoint texec: ", time.time() - start_time)
     process_data(spark, read_path, write_path)
 
-    print("texec: ", time.time() - start_time)
+    print("total texec: ", time.time() - start_time)
     spark.stop()
     print("success")
