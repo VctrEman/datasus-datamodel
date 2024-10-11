@@ -37,7 +37,9 @@ def init_spark():
     missing_files = [jar for jar in jar_list if not os.path.isfile(spark_home_jars + jar)]
     if missing_files:
         print(f"Warning: The following JAR files are missing: {missing_files}")
-    jars_concatenated = ",".join(jar_list)
+    else:
+        print("All JAR files found.")
+    jars_concatenated = ",".join([spark_home_jars + jar for jar in jar_list])
 
     spark = (
         SparkSession.builder.master("local[*]").appName("toSilver")
@@ -54,6 +56,7 @@ def init_spark():
 def set_spark_conf(spark, storage_account_name : str, sp_id : str, sp_secret_value : str, sp_directoryId : str) -> None:
     # Receives job environment variables
     if not storage_account_name or not sp_id or not sp_secret_value or not sp_directoryId:
+        print("storage account name returned: ",os.getenv('STORAGE_ACCOUNT_NAME'))
         raise ValueError("One or more required arguments are null: storage_account_name, sp_id, sp_secret_value, sp_directoryId")
     spark.conf.set("spark.sql.repl.eagerEval.enabled", True)
     spark.conf.set("spark.sql.legacy.charVarcharAsString", True)
@@ -254,5 +257,5 @@ if __name__ == "__main__":
     process_data(spark, read_path, write_path)
 
     print("total texec: ", time.time() - start_time)
+    print("SUCCESS: PySpark job executed successfully.")
     spark.stop()
-    print("success")
