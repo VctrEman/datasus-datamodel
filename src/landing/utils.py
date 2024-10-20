@@ -4,6 +4,7 @@ import os
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import time
 import psutil
+import subprocess
 from pysus.ftp import __cachepath__
 from pathlib import Path
 from minio import Minio
@@ -13,23 +14,25 @@ from dotenv import load_dotenv
 load_dotenv("../.env")
 
 # Concurrent download
-def download_data_parallel(prefix : str, ufs : list, years : list, months : list, downloadFun :  Callable) -> None:
-
+# def download_data_parallel(prefix : str, ufs : list, years : list, months : list, downloadFun :  Callable) -> None:
+def download_data_parallel(tasks, download_function):
         # Record the start time of the job
     start_time = time.time()
     
     # Calculate total tasks
-    total_tasks = len(ufs) * len(years) * len(months)
+    total_tasks = len(tasks) #len(ufs) * len(years) * len(months)
 
     # Initialize error counter
     error_count = 0
 
     # Create a ThreadPoolExecutor
-    with ProcessPoolExecutor(max_workers=4) as executor:
+    with ProcessPoolExecutor(max_workers=2)as executor:
         # Using a list to store download tasks
         futures = [
-            executor.submit(downloadFun, prefix, year, month, uf)
-            for uf in ufs for year in years for month in months
+            # executor.submit(downloadFun, prefix, year, month, uf)
+            executor.submit(download_function, *task)
+            for task in tasks
+            # for uf in ufs for year in years for month in months
         ]
 
         # Process the tasks as they are completed
@@ -208,7 +211,11 @@ def change_cache_directory(new_cache_path: str = "/src/caching") -> None:
 
 def azcopyDir(source, destination):
     """copy contentes from source"""
-    os.system(f"azcopy copy '{source}/*' '{destination}' --recursive")
+    command = ["azcopy", "copy", f"{source}/*", destination, "--recursive"]
+    try:
+        subprocess.run(command, capture_output=True, text=True, check=True, timeout=60)
+    except subprocess.CalledProcessError as e:
+        print(f"Erro ao executar o azcopy: {e.stderr}")
 
 def azcopySyncDir(source, destination):
     os.system(f"azcopy sync '{source}/*' '{destination}' --recursive")
