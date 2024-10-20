@@ -3,8 +3,9 @@ import argparse
 import time
 import findspark
 from pyspark.sql import SparkSession
-from pyspark.sql.types import StringType
+from pyspark.sql.types import StructType, StructField, IntegerType, DoubleType, StringType, DecimalType
 import pyspark.sql.functions as f
+from utils_spark import get_schema
 
 def init_spark():
     findspark.init()
@@ -44,12 +45,15 @@ def init_spark():
     spark = (
         SparkSession.builder.master("local[*]").appName("toSilver")
         .config("spark.jars", jars_concatenated)
-        .config("spark.io.compression.zstd.level", 12)
+        .config("spark.io.compression.zstd.level", "3")
         .config("spark.sql.execution.arrow.pyspark.enabled", "true")
-        .config("spark.sql.shuffle.partitions", "4")  # based on the size of the dataset and available cores, same as workers from process pool
-        .config("spark.executor.cores", "2")    # Use both vCPUs for executor (this config is just for safety, no performance)
-        .config("spark.executor.memory", "5g")  #(this config is just for safety, no performance)
-        .config("spark.driver.memory", "2g") #leaving 1gb for system processes (this config is just for safety, no performance)
+        .config("spark.scheduler.mode", "FAIR")
+        .config("spark.executor.memory", "4g")  # Allocate half of the memory to Spark executors
+        .config("spark.driver.memory", "2g")    # Allocate part of the memory to Spark driver
+        .config("spark.sql.shuffle.partitions", "2")  # Number of shuffle partitions (equal to vCPUs)
+        .config("spark.executor.cores", "1")    # 1 core per executor
+        .config("spark.driver.cores", "1")      # Use 1 core for the driver
+        .config("spark.default.parallelism", "2") # Adjust parallelism to match the number of vCPUs
         ).getOrCreate()
     return spark
 
@@ -67,7 +71,7 @@ def set_spark_conf(spark, storage_account_name : str, sp_id : str, sp_secret_val
     spark.conf.set(f"fs.azure.account.oauth2.client.endpoint.{storage_account_name}.dfs.core.windows.net", f"https://login.microsoftonline.com/{sp_directoryId}/oauth2/token")
     spark.sparkContext.setLogLevel("ERROR")
 
-def process_data(spark, read_path, write_path):
+def process_data(spark, read_path : str, write_path : str, schema_name : str) -> None:
     """
     Function to read and process data from parquet file
 
@@ -75,134 +79,23 @@ def process_data(spark, read_path, write_path):
         spark (SparkSession): PySpark session object
         read_path (String): Data file path
         write_path (String): Output Table name
+        schema_name (String): Schema name to be used from utils
     """
-    schemaSIH = {
-        'UF_ZI': StringType(),
-        'ANO_CMPT': StringType(),
-        'MES_CMPT': StringType(),
-        'ESPEC': StringType(),
-        'CGC_HOSP': StringType(),
-        'N_AIH': StringType(),
-        'IDENT': 'char(1)',
-        'CEP': StringType(),
-        'MUNIC_RES': StringType(),
-        'NASC': StringType(),
-        'SEXO': 'char(1)',
-        'UTI_MES_IN': StringType(),
-        'UTI_MES_AN': StringType(),
-        'UTI_MES_AL': StringType(),
-        'UTI_MES_TO': 'numeric(3)',
-        'MARCA_UTI': StringType(),
-        'UTI_INT_IN': StringType(),
-        'UTI_INT_AN': StringType(),
-        'UTI_INT_AL': StringType(),
-        'UTI_INT_TO': 'numeric(3)',
-        'DIAR_ACOM': 'numeric(3)',
-        'QT_DIARIAS': 'numeric(3)',
-        'PROC_SOLIC': StringType(),
-        'PROC_REA': StringType(),
-        'VAL_SH': 'numeric(13,2)',
-        'VAL_SP': 'numeric(13,2)',
-        'VAL_SADT': StringType(),
-        'VAL_RN': StringType(),
-        'VAL_ACOMP': StringType(),
-        'VAL_ORTP': StringType(),
-        'VAL_SANGUE': StringType(),
-        'VAL_SADTSR': StringType(),
-        'VAL_TRANSP': StringType(),
-        'VAL_OBSANG': StringType(),
-        'VAL_PED1AC': StringType(),
-        'VAL_TOT': 'numeric(14,2)',
-        'VAL_UTI': 'numeric(8,2)',
-        'US_TOT': 'numeric(8,2)',
-        'DT_INTER': 'char(8)',
-        'DT_SAIDA': 'char(8)',
-        'DIAG_PRINC': StringType(),
-        'DIAG_SECUN': StringType(),
-        'COBRANCA': StringType(),
-        'NATUREZA': StringType(),
-        'NAT_JUR': StringType(),
-        'GESTAO': 'char(1)',
-        'RUBRICA': StringType(),
-        'IND_VDRL': 'char(1)',
-        'MUNIC_MOV': StringType(),
-        'COD_IDADE': 'char(1)',
-        'IDADE': 'numeric(2)',
-        'DIAS_PERM': 'numeric(5)',
-        'MORTE': 'numeric(1)',
-        'NACIONAL': StringType(),
-        'NUM_PROC': StringType(),
-        'CAR_INT': StringType(),
-        'TOT_PT_SP': StringType(),
-        'CPF_AUT': StringType(),
-        'HOMONIMO': 'char(1)',
-        'NUM_FILHOS': 'numeric(2)',
-        'INSTRU': 'char(1)',
-        'CID_NOTIF': StringType(),
-        'CONTRACEP1': StringType(),
-        'CONTRACEP2': StringType(),
-        'GESTRISCO': 'char(1)',
-        'INSC_PN': StringType(),
-        'SEQ_AIH5': StringType(),
-        'CBOR': StringType(),
-        'CNAER': StringType(),
-        'VINCPREV': 'char(1)',
-        'GESTOR_COD': StringType(),
-        'GESTOR_TP': 'char(1)',
-        'GESTOR_CPF': StringType(),
-        'GESTOR_DT': StringType(),
-        'CNES': StringType(),
-        'CNPJ_MANT': StringType(),
-        'INFEHOSP': 'char(1)',
-        'CID_ASSO': StringType(),
-        'CID_MORTE': StringType(),
-        'COMPLEX': StringType(),
-        'FINANC': StringType(),
-        'FAEC_TP': StringType(),
-        'REGCT': StringType(),
-        'RACA_COR': StringType(),
-        'ETNIA': StringType(),
-        'SEQUENCIA': 'numeric(9)',
-        'REMESSA': StringType(),
-        'AUD_JUST': StringType(),
-        'SIS_JUST': StringType(),
-        'VAL_SH_FED': 'numeric(8,2)',
-        'VAL_SP_FED': 'numeric(8,2)',
-        'VAL_SH_GES': 'numeric(8,2)',
-        'VAL_SP_GES': 'numeric(8,2)',
-        'VAL_UCI': 'numeric(8,2)',
-        'MARCA_UCI': StringType(),
-        'DIAGSEC1': StringType(),
-        'DIAGSEC2': StringType(),
-        'DIAGSEC3': StringType(),
-        'DIAGSEC4': StringType(),
-        'DIAGSEC5': StringType(),
-        'DIAGSEC6': StringType(),
-        'DIAGSEC7': StringType(),
-        'DIAGSEC8': StringType(),
-        'DIAGSEC9': StringType(),
-        'TPDISEC1': 'char(1)',
-        'TPDISEC2': 'char(1)',
-        'TPDISEC3': 'char(1)',
-        'TPDISEC4': 'char(1)',
-        'TPDISEC5': 'char(1)',
-        'TPDISEC6': 'char(1)',
-        'TPDISEC7': 'char(1)',
-        'TPDISEC8': 'char(1)',
-        'TPDISEC9': 'char(1)'
-    }
+    #expected schema
+    schemaWrite, schemaRead = get_schema(schema_name)
 
     print(f"read_path: {read_path}")
 
-    df = spark.read.format('parquet').load(read_path)
-    print("Check if the reading schema has the same number of columns of the expected schema, len(expected) - len(read): ", len(schemaSIH) - len(df.columns))
+    df = spark.read.schema(schemaRead).format('parquet').load(read_path)
+    print("Check if the reading schema has the same number of columns of the expected schema, len(expected) - len(read): ", len(schemaWrite) - len(df.columns))
 
     # Cast columns to specified types
     df = df.select(
-        [f.col(column).cast(schemaSIH[column]) for column in df.columns if column in schemaSIH]
+        [f.col(column).cast(schemaWrite[column]) for column in df.columns if column in schemaWrite]
     )
 
     # Trim whitespace and replace empty strings or 0x00 with null, if dtype is StringType()
+
     df = df.select(
         [
             f.when(
@@ -220,29 +113,31 @@ def process_data(spark, read_path, write_path):
     df.write.option("compression", "zstd").parquet(write_path, mode="overwrite")
 
 if __name__ == "__main__":
+    #it can be used both for SIA and SIH
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", help="input file to parse", type=str,
                         default="SIH/SIH_JOB/2018/10/*/*")
     parser.add_argument("-o", "--output", help="result file to write", type=str,
-                        default="SIH/2018/10")
+                        default="TEST/SILVER/SIH/2018/10")
+    parser.add_argument( "--source_bucket", help="container, bucket where data will be read from", type=str,
+                        default="landing")
+    parser.add_argument( "--sink_bucket", help="container, bucket where data will be written to", type=str,
+                        default="sandbox")
+    parser.add_argument( "--schema_name", help="schema_name", type=str,
+                        default="SIH")
     args = parser.parse_args()
 
-    print("Start py script")
+    print("Starting job...")
 
     start_time = time.time()
-
-    #read_prefix = "SIH/SIH_JOB/2018/*/*/*"
-    #write_partition = f"SIH/2018"
-    read_file_system = "landing"
-    write_file_system = "silver"
 
     storage_account_name = os.getenv('STORAGE_ACCOUNT_NAME')
     sp_id = os.getenv('sp_id')
     sp_secret_value = os.getenv('sp_secret_value')
     sp_directoryId = os.getenv('sp_directoryId')
 
-    read_path   = f"abfss://{read_file_system}@{os.getenv('STORAGE_ACCOUNT_NAME')}.dfs.core.windows.net/{args.input}"
-    write_path  = f"abfss://{write_file_system}@{os.getenv('STORAGE_ACCOUNT_NAME')}.dfs.core.windows.net/{args.output}"
+    read_path   = f"abfss://{args.source_bucket}@{os.getenv('STORAGE_ACCOUNT_NAME')}.dfs.core.windows.net/{args.input}"
+    write_path  = f"abfss://{args.sink_bucket}@{os.getenv('STORAGE_ACCOUNT_NAME')}.dfs.core.windows.net/{args.output}"
     
     spark = init_spark()
 
@@ -254,7 +149,7 @@ if __name__ == "__main__":
                     )
  
     print("checkpoint texec: ", time.time() - start_time)
-    process_data(spark, read_path, write_path)
+    process_data(spark, read_path, write_path, args.schema_name)
 
     print("total texec: ", time.time() - start_time)
     print("SUCCESS: PySpark job executed successfully.")
