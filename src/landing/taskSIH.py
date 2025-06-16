@@ -16,17 +16,18 @@ def simple_download_sih(prefix : str, year : int, month : int, uf : str = 'CE') 
     try:
 
         prefix_download = f"./{prefix}/{data_group}/{year}/{month}/{uf}"
+        # prefix_download = f"./{prefix}/{data_group}/{year}"
 
         DIR = f"{prefix}/{year}/{month}/{uf}"
         sink_dir = f"{args.sink_dir}/{DIR}?{args.aztoken}"
         
         SIH.download([uf], [year], [month], groups=data_group, data_dir=prefix_download)
         print(os.listdir(prefix_download))
-        print("azcopydir: ", prefix_download)
-        print("sink dir: ", f"{args.sink_dir}/{DIR}")
-        azcopyDir(source=prefix_download, destination=sink_dir)
-        shutil.rmtree(prefix_download)
-        print("finished azcopy job")
+        # print("azcopydir: ", prefix_download)
+        # print("sink dir: ", f"{args.sink_dir}/{DIR}")
+        # azcopyDir(source=prefix_download, destination=sink_dir)
+        # shutil.rmtree(prefix_download)
+        # print("finished azcopy job")
         print("texec: ", time.time() - start_time)
         monitor_cpu_usage()
         result =  "SUCCESS"
