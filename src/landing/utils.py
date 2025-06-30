@@ -13,23 +13,24 @@ from dotenv import load_dotenv
 load_dotenv("../.env")
 
 # Concurrent download
-def download_data_parallel(prefix : str, ufs : list, years : list, months : list, downloadFun :  Callable) -> None:
-
+def download_data_parallel(tasks, download_function):
         # Record the start time of the job
     start_time = time.time()
     
     # Calculate total tasks
-    total_tasks = len(ufs) * len(years) * len(months)
+    total_tasks = len(tasks) #len(ufs) * len(years) * len(months)
 
     # Initialize error counter
     error_count = 0
 
     # Create a ThreadPoolExecutor
-    with ProcessPoolExecutor(max_workers=4) as executor:
+    with ProcessPoolExecutor(max_workers=2)as executor:
         # Using a list to store download tasks
         futures = [
-            executor.submit(downloadFun, prefix, year, month, uf)
-            for uf in ufs for year in years for month in months
+            # executor.submit(downloadFun, prefix, year, month, uf)
+            executor.submit(download_function, *task)
+            for task in tasks
+            # for uf in ufs for year in years for month in months
         ]
 
         # Process the tasks as they are completed
@@ -48,7 +49,8 @@ def download_data_parallel(prefix : str, ufs : list, years : list, months : list
     # Calculate the total execution time
     total_time = end_time - start_time
     print(f"Total execution time: {total_time:.2f} seconds")
-
+    
+    
 def upload_file_to_minio(file_path : str, object_name : str) -> None:
     """
     Uploads a file to MinIO.

@@ -114,8 +114,8 @@ def check_upload_status(api, dataset_id, max_wait_minutes=15):
 def main():
     """Função principal para orquestrar o processo de upload."""
     
-    LOCAL_SOURCE_DIR = '/home/nycolasdiaas/Workspaces/datasus-datamodel/SIH/cleaned_and_optimized/'
-    KAGGLE_DATASET_ID = 'nycolasdias/sih-dev' 
+    LOCAL_SOURCE_DIR = '/home/nycolasdiaas/Workspaces/datasus-datamodel/SIH/RD/cleaned_and_optimized2/'
+    KAGGLE_DATASET_ID = 'victoremanuel/bigsus-sih-silver' 
     LOCAL_UPLOAD_DIR = './kaggle_upload_temp'
 
     api = None
